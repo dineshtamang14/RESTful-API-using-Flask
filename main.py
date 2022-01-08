@@ -4,7 +4,6 @@ from random import choice
 
 app = Flask(__name__)
 
-
 # Connect to Database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cafes.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -42,7 +41,7 @@ class Cafe(db.Model):
 @app.route("/")
 def home():
     return render_template("index.html")
-    
+
 
 # HTTP GET - Read Record
 @app.route("/random")
@@ -58,11 +57,52 @@ def get_all_cafes():
     all_cafes = [cafe.to_dict() for cafe in cafes]
     return jsonify(cafes=all_cafes)
 
-## HTTP POST - Create Record
 
-## HTTP PUT/PATCH - Update Record
+@app.route("/search")
+def get_specific_cafe():
+    location = request.args.get("loc")
+    cafe = Cafe.query.filter_by(location=location).first()
+    if cafe:
+        return jsonify(cafe=cafe.to_dict())
+    else:
+        return jsonify(error={"Not Found": "Sorry, we don't have a cafe at that location"}), 404
 
-## HTTP DELETE - Delete Record
+
+# HTTP POST - Create Record
+@app.route("/add", methods=["POST"])
+def add_cafe():
+    try:
+        new_cafe = Cafe(
+            name=request.form.get("name"),
+            map_url=request.form.get("map_url"),
+            img_url=request.form.get("img_url"),
+            location=request.form.get("loc"),
+            has_sockets=bool(request.form.get("sockets")),
+            has_toilet=bool(request.form.get("toilet")),
+            has_wifi=bool(request.form.get("wifi")),
+            can_take_calls=bool(request.form.get("calls")),
+            seats=request.form.get("seats"),
+            coffee_price=request.form.get("coffee_price"),
+        )
+        db.session.add(new_cafe)
+        db.session.commit()
+        return jsonify(cafe={"success": "successfully added a new Cafe"})
+    except:
+        return jsonify(cafe={"error": "something went wrong"}), 403
+
+
+# HTTP PUT/PATCH - Update Record
+@app.route("/update-price/<int:cafe_id>", methods=["PATCH"])
+def update_cafe(cafe_id):
+    cafe = Cafe.query.get(cafe_id)
+    if cafe:
+        cafe.coffee_price = request.args.get("coffee_price")
+        db.session.commit()
+        return jsonify(cafe={"success": "successfully updated the price"})
+    else:
+        return jsonify(error={"Not Found": f"Sorry cafe with that id: {cafe_id} was not found in Database"})
+
+# HTTP DELETE - Delete Record
 
 
 if __name__ == '__main__':
